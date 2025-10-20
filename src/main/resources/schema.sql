@@ -18,12 +18,14 @@ CREATE TABLE IF NOT EXISTS directors (
     name VARCHAR(255) NOT NULL UNIQUE
 );
 
--- Film-director reference table
+-- Исправьте таблицу films_directors
 CREATE TABLE IF NOT EXISTS films_directors (
     film_id BIGINT NOT NULL,
-    director_id VARCHAR(255) NOT NULL
+    director_id BIGINT NOT NULL, -- ИЗМЕНИТЕ НА BIGINT
+    PRIMARY KEY (film_id, director_id),
+    FOREIGN KEY (film_id) REFERENCES films(id) ON DELETE CASCADE,
+    FOREIGN KEY (director_id) REFERENCES directors(id) ON DELETE CASCADE
 );
-
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

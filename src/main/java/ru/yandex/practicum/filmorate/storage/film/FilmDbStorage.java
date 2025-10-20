@@ -103,7 +103,13 @@ public class FilmDbStorage implements FilmStorage {
         film.setId(rs.getLong("id"));
         film.setName(rs.getString("name"));
         film.setDescription(rs.getString("description"));
-        film.setReleaseDate(rs.getDate("release_date").toLocalDate());
+
+        // Обработка возможного null для release_date
+        Date releaseDate = rs.getDate("release_date");
+        if (releaseDate != null) {
+            film.setReleaseDate(releaseDate.toLocalDate());
+        }
+
         film.setDuration(rs.getInt("duration"));
         film.setCreatedAt(rs.getTimestamp("created_at") != null ?
                 rs.getTimestamp("created_at").toLocalDateTime() : null);
@@ -159,12 +165,11 @@ public class FilmDbStorage implements FilmStorage {
     private void saveDirector(Film film) {
         if (!film.getDirectors().isEmpty()) {
             String fdSql = "INSERT INTO films_directors (film_id, director_id) VALUES (?, ?)";
-            String dSql = "INSERT INTO directors (id, name) VALUES (?, ?)";
+            String dSql = "INSERT INTO directors (id, name) VALUES (?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name)";
 
             for (Director director : film.getDirectors()) {
-                if (getDirectorById(director.getId()) == null) {
-                    jdbcTemplate.update(dSql, director.getId(), getDirectorById(director.getId()));
-                }
+                // Проверяем существование режиссера и создаем при необходимости
+                jdbcTemplate.update(dSql, director.getId(), director.getName());
                 jdbcTemplate.update(fdSql, film.getId(), director.getId());
             }
         }
@@ -206,10 +211,14 @@ public class FilmDbStorage implements FilmStorage {
         saveLikes(film);
     }
 
-    private String getDirectorById(Long id) {
-        String sql = "SELECT name FROM directors WHERE id = ?";
-
-        return jdbcTemplate.query(sql, (rs, rowNum) -> rs.getString("name"), id).getFirst();
+    private Director getDirectorById(Long id) {
+        String sql = "SELECT id, name FROM directors WHERE id = ?";
+        try {
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) ->
+                    new Director(rs.getLong("id"), rs.getString("name")), id);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
@@ -228,7 +237,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> findCommonFilms(Long userId, Long friendId) {
-        String sql = "SELECT f.*, m.id as mpa_id, m.name as mpa_name " +
+        String sql = "SELECT f.*, m.id as mpa_id, m.code as mpa_code, m.name as mpa_name, m.description as mpa_description " +
                 "FROM films f " +
                 "JOIN mpa_ratings m ON f.mpa_id = m.id " +
                 "JOIN film_likes fl1 ON f.id = fl1.film_id AND fl1.user_id = ? " +
