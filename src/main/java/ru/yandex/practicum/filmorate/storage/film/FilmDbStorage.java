@@ -228,10 +228,12 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> findCommonFilms(Long userId, Long friendId) {
-        String sql = "SELECT f.* FROM films f " +
+        String sql = "SELECT f.*, m.id as mpa_id, m.name as mpa_name " +
+                "FROM films f " +
+                "JOIN mpa_ratings m ON f.mpa_id = m.id " +
                 "JOIN film_likes fl1 ON f.id = fl1.film_id AND fl1.user_id = ? " +
                 "JOIN film_likes fl2 ON f.id = fl2.film_id AND fl2.user_id = ? " +
-                "ORDER BY (SELECT COUNT(*) FROM film_likes WHERE film_id = f.id) DESC";
+                "ORDER BY (SELECT COUNT(*) FROM film_likes fl WHERE fl.film_id = f.id) DESC";
 
         return jdbcTemplate.query(sql, this::mapRowToFilm, userId, friendId);
     }

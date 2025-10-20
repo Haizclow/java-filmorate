@@ -227,6 +227,13 @@ public class FilmService {
     }
 
     public List<Film> getCommonFilms(Long userId, Long friendId) {
+        if (!userStorage.existsById(userId)) {
+            throw new NotFoundException("Пользователь с ID " + userId + " не найден");
+        }
+        if (!userStorage.existsById(friendId)) {
+            throw new NotFoundException("Пользователь с ID " + friendId + " не найден");
+        }
+
         return filmStorage.findCommonFilms(userId, friendId);
     }
 }
